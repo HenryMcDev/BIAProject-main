@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Bot, ArrowRight, User, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../services/supabase';
 
 const Login = () => {
-    const { login, register } = useAuth();
     const [isRegistering, setIsRegistering] = useState(false);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -13,45 +10,65 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
+    const [jobRole, setJobRole] = useState('');
     const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+
+    const submitToWebhook = async (actionName, payloadData) => {
+        const securityKey = crypto.randomUUID();
+        const finalPayload = {
+            "Ação": actionName,
+            "ChaveSeguranca": securityKey,
+            ...payloadData
+        };
+
+        const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(finalPayload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro na requisição: ${response.statusText}`);
+        }
+
+        return await response.json();
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMsg('');
         setLoading(true);
 
         try {
-            if (isRegistering) {
-                const { error } = await register(email, password, fullName);
-                if (error) throw error;
+            if (isForgotPassword) {
+                await submitToWebhook("RecuperarSenha", { "Email": email });
+                setSuccessMsg("Instruções de recuperação enviadas para o seu e-mail.");
+            } else if (isRegistering) {
+                await submitToWebhook("Cadastro", {
+                    "Nome": fullName,
+                    "Função": jobRole,
+                    "Email": email,
+                    "Senha": password
+                });
+                setSuccessMsg("Cadastro realizado com sucesso! Verifique seu e-mail.");
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setJobRole('');
             } else {
-                const { error } = await login(email, password);
-                if (error) throw error;
+                await submitToWebhook("Login", {
+                    "Email": email,
+                    "Senha": password
+                });
+                // Simulate successful login state
+                localStorage.setItem('auth_token', 'n8n_mock_token');
+                localStorage.setItem('user', JSON.stringify({ email }));
+                window.location.href = '/';
             }
         } catch (err) {
-            setError(err.message === 'Invalid login credentials'
-                ? 'Email ou senha incorretos.'
-                : err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleResetPassword = async (e) => {
-        e.preventDefault();
-        setError('');
-        setMessage('');
-        setLoading(true);
-
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-            if (error) throw error;
-            setMessage('O Gera Z enviou as instruções para o seu e-mail!');
-        } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Ocorreu um erro inesperado.');
         } finally {
             setLoading(false);
         }
@@ -83,10 +100,10 @@ const Login = () => {
                 <div className="w-full md:w-1/2 bg-white flex flex-col justify-center p-8 md:p-12 relative">
                     <div className="max-w-md mx-auto w-full">
                         <h2 className="text-2xl font-bold text-bit-blue font-montserrat mb-2">
-                            {isForgotPassword 
-                                ? 'Recuperar Senha' 
-                                : isRegistering 
-                                    ? 'Crie sua conta' 
+                            {isForgotPassword
+                                ? 'Recuperar Senha'
+                                : isRegistering
+                                    ? 'Crie sua conta'
                                     : 'Bem-vindo de volta'}
                         </h2>
                         <p className="text-slate-500 mb-8">
@@ -103,31 +120,49 @@ const Login = () => {
                                 {error}
                             </div>
                         )}
-                        {message && (
-                            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center gap-2 text-sm">
-                                {message}
+                        {successMsg && (
+                            <div className="mb-4 p-3 bg-green-900/30 border border-green-500 text-green-400 rounded-lg flex items-center gap-2 text-sm">
+                                {successMsg}
                             </div>
                         )}
 
-                        <form onSubmit={isForgotPassword ? handleResetPassword : handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
 
                             {!isForgotPassword && isRegistering && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Nome Completo</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User size={20} className="text-slate-400" />
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Nome Completo</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <User size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={fullName}
+                                                onChange={(e) => setFullName(e.target.value)}
+                                                placeholder="Seu Nome"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-bit-blue/50 focus:border-bit-blue transition-all"
+                                                required={!isForgotPassword && isRegistering}
+                                            />
                                         </div>
-                                        <input
-                                            type="text"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                            placeholder="Seu Nome"
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-bit-blue/50 focus:border-bit-blue transition-all"
-                                            required={!isForgotPassword && isRegistering}
-                                        />
                                     </div>
-                                </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Função</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Bot size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={jobRole}
+                                                onChange={(e) => setJobRole(e.target.value)}
+                                                placeholder="Sua Função (ex: Analista)"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-bit-blue/50 focus:border-bit-blue transition-all"
+                                                required={!isForgotPassword && isRegistering}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
                             )}
 
                             <div className="space-y-2">
@@ -151,19 +186,6 @@ const Login = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <label className="text-sm font-medium text-slate-700">Senha</label>
-                                        {!isRegistering && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setIsForgotPassword(true);
-                                                    setError('');
-                                                    setMessage('');
-                                                }}
-                                                className="text-xs font-semibold text-bit-blue hover:text-blue-700 transition-colors"
-                                            >
-                                                Esqueceu a senha?
-                                            </button>
-                                        )}
                                     </div>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -179,15 +201,29 @@ const Login = () => {
                                             minLength={6}
                                         />
                                     </div>
+                                    {!isRegistering && (
+                                        <div className="mt-1 text-right">
+                                            <span
+                                                onClick={() => {
+                                                    setIsForgotPassword(true);
+                                                    setError('');
+                                                    setSuccessMsg('');
+                                                }}
+                                                className="text-yellow-500 hover:text-yellow-400 cursor-pointer text-sm font-semibold transition-colors inline-block"
+                                            >
+                                                Esqueci minha senha
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-bit-blue text-white font-bold py-3 mt-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="w-full bg-yellow-500 text-gray-900 font-bold py-3 mt-4 rounded-xl hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Processando...' : (isForgotPassword ? 'Enviar Instruções' : isRegistering ? 'Criar Conta' : 'Entrar')}
+                                {loading ? 'Processando...' : (isForgotPassword ? 'Recuperar Senha' : isRegistering ? 'Criar Conta' : 'Entrar')}
                                 {!loading && <ArrowRight size={18} />}
                             </button>
                         </form>
@@ -195,14 +231,15 @@ const Login = () => {
                         <div className="mt-8 text-center text-sm">
                             {isForgotPassword ? (
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setIsForgotPassword(false);
                                         setError('');
-                                        setMessage('');
+                                        setSuccessMsg('');
                                     }}
                                     className="font-bold text-bit-blue hover:text-blue-700 transition-colors"
                                 >
-                                    Voltar para o Login
+                                    Voltar ao Login
                                 </button>
                             ) : (
                                 <>
@@ -210,6 +247,7 @@ const Login = () => {
                                         {isRegistering ? 'Já tem uma conta? ' : 'Não tem conta? '}
                                     </span>
                                     <button
+                                        type="button"
                                         onClick={() => {
                                             setIsRegistering(!isRegistering);
                                             setError('');
