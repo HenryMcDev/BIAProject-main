@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const verifyToken = async (email, token) => {
-        const WEBHOOK_URL = 'https://automacao-n8n.dczbc9.easypanel.host/webhook/verify-token'; // placeholder n8n Webhook URL
+        const WEBHOOK_URL = 'https://automacao-n8n.dczbc9.easypanel.host/webhook-test/chatBIA'; // placeholder n8n Webhook URL
 
         const response = await fetch(WEBHOOK_URL, {
             method: 'POST',

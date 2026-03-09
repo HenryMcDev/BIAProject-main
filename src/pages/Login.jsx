@@ -55,7 +55,7 @@ const Login = () => {
             ...payloadData
         };
 
-        const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+        const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook-test/chatBIA', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(finalPayload)
