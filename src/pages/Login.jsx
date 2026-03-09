@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Bot, ArrowRight, User, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Bot, ArrowRight, User, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
+    const auth = useAuth();
     const [isRegistering, setIsRegistering] = useState(false);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -13,6 +15,37 @@ const Login = () => {
     const [jobRole, setJobRole] = useState('');
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+
+    // Verification States
+    const [token, setToken] = useState('');
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyError, setVerifyError] = useState('');
+
+    const handleVerify = async (e) => {
+        e.preventDefault();
+        setVerifyError('');
+        setVerifyLoading(true);
+        try {
+            await auth.verifyToken(auth.pendingEmail, token);
+            setSuccessMsg('Verificação concluída com sucesso!');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        } catch (err) {
+            setVerifyError(err.message || 'Código inválido.');
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
+
+    const handleResendCode = async () => {
+        try {
+            await submitToWebhook("ResendVerification", { "Email": auth?.pendingEmail });
+            setSuccessMsg("Novo código enviado com sucesso.");
+        } catch (err) {
+            setVerifyError("Erro ao reenviar código.");
+        }
+    };
 
     const submitToWebhook = async (actionName, payloadData) => {
         const securityKey = crypto.randomUUID();
@@ -46,36 +79,95 @@ const Login = () => {
                 await submitToWebhook("RecuperarSenha", { "Email": email });
                 setSuccessMsg("Instruções de recuperação enviadas para o seu e-mail.");
             } else if (isRegistering) {
-                await submitToWebhook("Cadastro", {
-                    "Nome": fullName,
-                    "Função": jobRole,
-                    "Email": email,
-                    "Senha": password
-                });
-                setSuccessMsg("Cadastro realizado com sucesso! Verifique seu e-mail.");
+                await auth.register(email, password, fullName);
                 setFullName('');
                 setEmail('');
                 setPassword('');
                 setJobRole('');
+                // Note: AuthContext handles needsVerification state
             } else {
-                await submitToWebhook("Login", {
-                    "Email": email,
-                    "Senha": password
-                });
-                // Simulate successful login state
-                localStorage.setItem('auth_token', 'n8n_mock_token');
-                localStorage.setItem('user', JSON.stringify({ email }));
+                await auth.login(email, password);
                 window.location.href = '/';
             }
         } catch (err) {
-            setError(err.message || 'Ocorreu um erro inesperado.');
+            if (err.message && err.message.toLowerCase().includes('not confirmed')) {
+                // Ignore, as AuthContext handles needsVerification
+            } else {
+                setError(err.message || 'Ocorreu um erro inesperado.');
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const VerificationModal = () => (
+        <div className="fixed inset-0 bg-[#005696]/90 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                <h3 className="text-2xl font-bold font-montserrat text-[#005696] mb-2 text-center">Verificação de E-mail</h3>
+                <p className="text-slate-600 mb-6 text-center">
+                    Enviamos um código de 6 dígitos para o e-mail <strong>{auth.pendingEmail}</strong>.
+                    Por favor, insira-o abaixo para continuar.
+                </p>
+
+                {verifyError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2 text-sm">
+                        <AlertCircle size={16} />
+                        {verifyError}
+                    </div>
+                )}
+                {successMsg && !verifyError && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center gap-2 text-sm">
+                        {successMsg}
+                    </div>
+                )}
+
+                <form onSubmit={handleVerify} className="space-y-4">
+                    <div className="space-y-2">
+                        <input
+                            type="text"
+                            maxLength={6}
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            placeholder="000000"
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] text-center text-2xl tracking-[0.5em] font-mono transition-all"
+                            required
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={verifyLoading || token.length !== 6}
+                        className="w-full bg-[#FFCC00] text-gray-900 font-bold py-3 rounded-xl hover:bg-[#e6b800] transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {verifyLoading ? <Loader2 className="animate-spin" size={20} /> : 'Verificar Código'}
+                    </button>
+                </form>
+
+                <div className="mt-6 text-center">
+                    <button
+                        type="button"
+                        onClick={handleResendCode}
+                        className="text-sm font-bold text-[#005696] hover:text-blue-800 transition-colors"
+                    >
+                        Não recebeu? Reenviar código
+                    </button>
+                    <div className="mt-4">
+                        <button
+                            type="button"
+                            onClick={() => auth.setNeedsVerification(false)}
+                            className="text-xs text-slate-500 hover:text-slate-700 underline"
+                        >
+                            Voltar ao login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            {auth?.needsVerification && <VerificationModal />}
             <div className="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row w-full max-w-4xl overflow-hidden min-h-[600px]">
 
                 {/* Left Side - Branding */}
