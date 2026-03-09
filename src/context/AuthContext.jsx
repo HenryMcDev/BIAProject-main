@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 
 const AuthContext = createContext({});
 
@@ -16,6 +16,11 @@ export const AuthProvider = ({ children }) => {
     const [pendingEmail, setPendingEmail] = useState('');
 
     useEffect(() => {
+        // MOCK USER STATE FOR TESTING
+        setUser({ email: 'test@example.com', id: 'mock-id' });
+        setLoading(false);
+
+        /*
         // Check active session
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -36,9 +41,12 @@ export const AuthProvider = ({ children }) => {
         });
 
         return () => subscription.unsubscribe();
+        */
     }, []);
 
     const login = async (email, password) => {
+        return { success: true, user: { email, id: 'mock-id' } };
+        /*
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             // handle "Email not confirmed"
@@ -49,9 +57,12 @@ export const AuthProvider = ({ children }) => {
             throw error;
         }
         return { data, error };
+        */
     };
 
     const register = async (email, password, fullName) => {
+        return { success: true, user: { email, id: 'mock-id' } };
+        /*
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -71,6 +82,7 @@ export const AuthProvider = ({ children }) => {
         setPendingEmail(email);
 
         return { data, error };
+        */
     };
 
     const verifyToken = async (email, token) => {
@@ -97,7 +109,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        return supabase.auth.signOut();
+        setUser(null);
+        // return supabase.auth.signOut();
     };
 
     const value = {

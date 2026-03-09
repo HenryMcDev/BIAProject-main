@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 import { X, Calendar as CalendarIcon, Clock, Share2 } from 'lucide-react';
 
 const BIT_PALETTE = ['#005696', '#FFCC00', '#1E293B', '#4F46E5', '#7C3AED'];
@@ -35,11 +35,15 @@ const ScheduleCalendar = () => {
     const fetchPosts = async () => {
         try {
             setLoading(true);
+            console.log("Data ready for n8n transfer:", { action: "fetch_posts_calendar" });
+            /*
             const { data, error } = await supabase
                 .from('scheduled_posts')
                 .select('*');
 
             if (error) throw error;
+            */
+            const data = [];
 
             if (data) {
                 const formattedEvents = data.map(post => {
@@ -228,7 +232,7 @@ const ScheduleCalendar = () => {
                 </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 flex-grow p-4 md:p-6 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 grow p-4 md:p-6 overflow-hidden">
                 <div className="h-full min-h-[600px] relative">
                     {loading && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl">

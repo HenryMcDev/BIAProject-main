@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Copy, Check, Share2, Terminal, Maximize2, X, BookOpen, Calendar } from 'lucide-react';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 
 const PromptLibrary = () => {
     const [prompts, setPrompts] = useState([]);
@@ -16,6 +16,8 @@ const PromptLibrary = () => {
     const fetchPrompts = async () => {
         try {
             setLoading(true);
+            console.log("Data ready for n8n transfer:", { action: "fetch_prompts" });
+            /*
             const { data, error } = await supabase
                 .from('saved_prompts')
                 .select('*')
@@ -23,6 +25,8 @@ const PromptLibrary = () => {
 
             if (error) throw error;
             setPrompts(data || []);
+            */
+            setPrompts([]);
         } catch (error) {
             console.error('Erro ao buscar prompts:', error.message);
         } finally {

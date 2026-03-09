@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
 const ResetPasswordModal = () => {
@@ -24,11 +24,14 @@ const ResetPasswordModal = () => {
         setSuccess('');
 
         try {
+            console.log("Data ready for n8n transfer:", { action: "update_password", newPassword });
+            /*
             const { error: updateError } = await supabase.auth.updateUser({
                 password: newPassword
             });
 
             if (updateError) throw updateError;
+            */
 
             setSuccess('Senha atualizada com sucesso!');
 

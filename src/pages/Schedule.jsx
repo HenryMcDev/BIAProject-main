@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Instagram, Upload, Wand2, X, Save, Clock, Trash2, CheckCircle, FileImage, AlertCircle } from 'lucide-react';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 import { sendMessageToOpenRouter } from '../services/openRouter';
 
 const Schedule = () => {
@@ -28,12 +28,16 @@ const Schedule = () => {
 
     const fetchPosts = async () => {
         try {
+            console.log("Data ready for n8n transfer:", { action: "fetch_posts_schedule" });
+            /*
             const { data, error } = await supabase
                 .from('scheduled_posts')
                 .select('*')
                 // Orders by the new standard key 'post_date' if available, or created_at
                 .order('created_at', { ascending: false });
             if (error) throw error;
+            */
+            const data = [];
             setPosts(data || []);
         } catch (error) {
             console.error('Erro ao buscar posts:', error);
@@ -113,11 +117,14 @@ const Schedule = () => {
 
             // 3. Dispatch to Supabase (Persistence)
             // Note: 'scheduled_posts' table must have columns: caption, hashtags, post_date, image_content, status
+            console.log("Data ready for n8n transfer:", payload);
+            /*
             const { error: dbError } = await supabase
                 .from('scheduled_posts')
                 .insert([payload]);
 
             if (dbError) throw dbError;
+            */
 
             // 4. Feedback & Cleanup
             alert("Post agendado com sucesso! 🚀");

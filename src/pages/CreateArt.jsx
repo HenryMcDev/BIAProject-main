@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Save, Copy, Loader2, Check, Image as ImageIcon, Plus, X, ChevronDown, Trash2 } from 'lucide-react';
 import { sendMessageToOpenRouter, GEMINI_PROMPT_SYSTEM } from '../services/openRouter';
-import { supabase } from '../services/supabase';
+// import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
 const CreateArt = () => {
@@ -42,6 +42,7 @@ const CreateArt = () => {
                 const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
                 // Upload Supabase
+                /*
                 const { error: uploadError } = await supabase.storage
                     .from('ref-images')
                     .upload(fileName, file);
@@ -52,6 +53,8 @@ const CreateArt = () => {
                 const { data } = supabase.storage
                     .from('ref-images')
                     .getPublicUrl(fileName);
+                */
+                const data = { publicUrl: URL.createObjectURL(file) };
 
                 newImages.push({
                     id: fileName, // ID único
@@ -124,7 +127,7 @@ const CreateArt = () => {
             // Prepara lista de URLs para salvar
             const imagesJson = JSON.stringify(refImages.map(img => img.url));
 
-            const { error } = await supabase.from('saved_prompts').insert({
+            const payload = {
                 user_id: user.id,
                 title: idea || 'Fusão de Imagens',
                 prompt_text: optimizedPrompt,
@@ -132,9 +135,15 @@ const CreateArt = () => {
                 style: style,
                 platform: 'gemini',
                 reference_images: imagesJson // Salva na nova coluna
-            });
+            };
+
+            console.log("Data ready for n8n transfer:", payload);
+
+            /*
+            const { error } = await supabase.from('saved_prompts').insert(payload);
 
             if (error) throw error;
+            */
 
             setSavedId('saved');
             setTimeout(() => setSavedId(null), 3000);

@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import PromptLibrary from './pages/PromptLibrary';
 import ScheduleCalendar from './pages/ScheduleCalendar';
-import SupabaseDiagnostic from './components/SupabaseDiagnostic';
+// import SupabaseDiagnostic from './components/SupabaseDiagnostic';
 import ResetPasswordModal from './components/ResetPasswordModal';
 
 const ProtectedRoute = ({ children }) => {
@@ -63,13 +63,7 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
 
-        <Route path="/test-db" element={
-          <ProtectedRoute>
-            <Layout>
-              <SupabaseDiagnostic />
-            </Layout>
-          </ProtectedRoute>
-        } />
+
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -24,7 +24,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 )}
                 <button
                     onClick={toggleSidebar}
-                    className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors flex-shrink-0"
+                    className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors shrink-0"
                     title={isCollapsed ? "Expandir menu" : "Recolher menu"}
                 >
                     <Menu size={22} />
@@ -42,7 +42,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                             title={isCollapsed ? item.label : undefined}
                             className={`w-full flex items-center rounded-xl transition-all duration-300 group ${isCollapsed ? 'justify-center p-3' : 'space-x-4 px-4 py-3.5'
                                 } ${isActive
-                                    ? 'bg-white/10 text-white outline outline-1 outline-[#FFD700]/30 shadow-sm'
+                                    ? 'bg-white/10 text-white outline outline-[#FFD700]/30 shadow-sm'
                                     : 'text-white/60 hover:bg-white/5 hover:text-white'
                                 }`}
                         >
