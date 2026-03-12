@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Bot, ArrowRight, User, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, Bot, ArrowRight, User, AlertCircle, Loader2, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { setUser } = useAuth();
     const [authStep, setAuthStep] = useState('login'); // 'login', 'register', 'recovery'
+    const isRegistering = authStep === 'register';
     const [loading, setLoading] = useState(false);
 
     // Form States
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [jobRole, setJobRole] = useState('');
+    const [userFunction, setUserFunction] = useState('');
+    const [securityKey, setSecurityKey] = useState('');
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -31,7 +36,7 @@ const Login = () => {
             return;
         }
 
-        if (authStep === 'register' && (!fullName || !jobRole)) {
+        if (isRegistering && (!fullName || !userFunction || !securityKey)) {
             setError('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
@@ -39,61 +44,49 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const payload = {
-                action: authStep,
-                email: email,
-                password: password,
-                ...(authStep === 'register' && { fullName: fullName, jobRole: jobRole })
-            };
-
-            const WEBHOOK_URL = 'https://automacao-n8n.dczbc9.easypanel.host/webhook-test/chatBIA';
-
-            const response = await fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erro na requisição: ${response.statusText}`);
+            let payload = {};
+            if (authStep === 'login') {
+                payload = { action: 'login', email, password };
+            } else if (isRegistering) {
+                payload = { 
+                    action: 'cadastro', 
+                    name: fullName, 
+                    function: userFunction, 
+                    email, 
+                    password, 
+                    ChaveSeguranca: securityKey 
+                };
+            } else if (authStep === 'recovery') {
+                payload = { action: 'recuperar', email };
             }
 
-            const data = await response.json();
-
-            // Handle Response
-            if (data.status === 'liberado') {
-                // Store temporary session data if needed
-                localStorage.setItem('bit_user_email', email);
-                localStorage.setItem('bit_session', 'active');
-
-                setSuccessMsg('Acesso liberado! Redirecionando...');
-                setTimeout(() => navigate('/dashboard'), 1000);
-            } else if (data.status === 'bloqueado') {
-                setError(data.message || 'Acesso bloqueado. Verifique suas credenciais e tente novamente.');
-            } else {
-                // Handle success cases where status is not explicitly 'liberado'
+            const WEBHOOK_URL = 'https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA';
+            const resposta = await axios.post(WEBHOOK_URL, payload);
+            
+            if (resposta.data.status === 'liberado' || resposta.data.status?.toLowerCase() === 'sucesso' || !resposta.data.status) {
                 if (authStep === 'recovery') {
-                    setSuccessMsg('Instruções de recuperação enviadas para o seu e-mail.');
+                    setSuccessMsg(resposta.data.mensagem || 'Instruções de recuperação enviadas para o seu e-mail.');
                     setTimeout(() => {
                         setAuthStep('login');
                         setSuccessMsg('');
                     }, 3000);
-                } else if (authStep === 'register') {
-                    setSuccessMsg('Cadastro realizado com sucesso! Você pode fazer login agora.');
-                    setTimeout(() => {
-                        setAuthStep('login');
-                        setSuccessMsg('');
-                    }, 3000);
-                } else {
-                    // Fallback for login just in case
-                    localStorage.setItem('bit_user_email', email);
-                    localStorage.setItem('bit_session', 'active');
-                    navigate('/dashboard');
+                    return;
                 }
+                
+                const userData = {
+                    nome: resposta.data.nome || fullName,
+                    email: email,
+                    role: resposta.data.role || userFunction
+                };
+                
+                localStorage.setItem('nomeUsuario', userData.nome);
+                if (setUser) setUser(userData);
+                navigate('/');
+            } else {
+                setError(resposta.data.mensagem || 'Acesso bloqueado ou falha na requisição.');
             }
-
-        } catch (err) {
-            setError(err.message || 'Ocorreu um erro inesperado.');
+        } catch (erro) {
+            setError('Falha na comunicação com o servidor.');
         } finally {
             setLoading(false);
         }
@@ -153,7 +146,7 @@ const Login = () => {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
 
-                            {authStep === 'register' && (
+                            {isRegistering && (
                                 <>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-700">Nome Completo</label>
@@ -167,23 +160,39 @@ const Login = () => {
                                                 onChange={(e) => setFullName(e.target.value)}
                                                 placeholder="Seu Nome"
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
-                                                required={authStep === 'register'}
+                                                required={isRegistering}
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-700">Função</label>
+                                        <label className="text-sm font-medium text-slate-700">Cargo / Função</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <Bot size={20} className="text-slate-400" />
                                             </div>
                                             <input
                                                 type="text"
-                                                value={jobRole}
-                                                onChange={(e) => setJobRole(e.target.value)}
+                                                value={userFunction}
+                                                onChange={(e) => setUserFunction(e.target.value)}
                                                 placeholder="Sua Função (ex: Analista)"
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
-                                                required={authStep === 'register'}
+                                                required={isRegistering}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Chave de Segurança</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Key size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={securityKey}
+                                                onChange={(e) => setSecurityKey(e.target.value)}
+                                                placeholder="Chave de Acesso"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
+                                                required={isRegistering}
                                             />
                                         </div>
                                     </div>
@@ -246,10 +255,10 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-[#FFCC00] text-[#005696] font-bold py-3 mt-4 rounded-xl hover:bg-[#FFCC00]/90 transition-colors shadow-lg shadow-[#FFCC00]/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-[#005696] text-white font-bold py-3 mt-4 rounded-xl hover:bg-[#005696]/90 transition-colors shadow-lg shadow-[#005696]/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading && <Loader2 className="animate-spin" size={20} />}
-                                {loading ? 'Processando...' : (authStep === 'recovery' ? 'Recuperar Senha' : authStep === 'register' ? 'Criar Conta' : 'Entrar')}
+                                {loading ? 'BIA está verificando...' : (authStep === 'recovery' ? 'Recuperar Senha' : isRegistering ? 'Criar Conta' : 'Entrar')}
                                 {!loading && <ArrowRight size={18} />}
                             </button>
                         </form>

@@ -1,130 +1,85 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-// import { supabase } from '../services/supabase';
 
 const AuthContext = createContext({});
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-
-    // New state for verification
-    const [needsVerification, setNeedsVerification] = useState(false);
-    const [pendingEmail, setPendingEmail] = useState('');
 
     useEffect(() => {
-        // MOCK USER STATE FOR TESTING
-        setUser({ email: 'test@example.com', id: 'mock-id' });
+        setUser(null);
         setLoading(false);
-
-        /*
-        // Check active session
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
-            setLoading(false);
-        };
-
-        checkSession();
-
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            setUser(session?.user ?? null);
-            setLoading(false);
-
-            if (event === 'PASSWORD_RECOVERY') {
-                setIsPasswordRecovery(true);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-        */
     }, []);
 
     const login = async (email, password) => {
-        return { success: true, user: { email, id: 'mock-id' } };
-        /*
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            // handle "Email not confirmed"
-            if (error.message.toLowerCase().includes('email not confirmed') || error.message.toLowerCase().includes('not confirmed')) {
-                setNeedsVerification(true);
-                setPendingEmail(email);
+        try {
+            const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    acao: 'login',
+                    email: email || "",
+                    password: password || "",
+                    fullName: ""
+                })
+            });
+
+            const data = await response.json();
+
+            if (data && data.authenticated === true) {
+                const userData = data.user || { email: email || "" };
+                setUser(userData);
+                return { user: userData };
+            } else {
+                throw new Error(data.message || 'Erro ao realizar login.');
             }
+        } catch (error) {
             throw error;
         }
-        return { data, error };
-        */
     };
 
     const register = async (email, password, fullName) => {
-        return { success: true, user: { email, id: 'mock-id' } };
-        /*
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: fullName,
-                },
-            },
-        });
+        try {
+            const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    acao: 'register',
+                    email: email || "",
+                    password: password || "",
+                    fullName: fullName || ""
+                })
+            });
 
-        if (error) {
+            const data = await response.json();
+
+            if (data && data.authenticated === true) {
+                const userData = data.user || { email: email || "", fullName: fullName || "" };
+                setUser(userData);
+                return { user: userData };
+            } else if (data && data.success === false) {
+                throw new Error(data.message || 'Erro ao realizar cadastro.');
+            }
+
+            return data;
+        } catch (error) {
             throw error;
         }
-
-        // Supabase returns success. Depending on project settings, email confirmation is required.
-        setNeedsVerification(true);
-        setPendingEmail(email);
-
-        return { data, error };
-        */
-    };
-
-    const verifyToken = async (email, token) => {
-        const WEBHOOK_URL = 'https://automacao-n8n.dczbc9.easypanel.host/webhook-test/chatBIA'; // placeholder n8n Webhook URL
-
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, token })
-        });
-
-        if (!response.ok) {
-            throw new Error('Erro ao verificar o código.');
-        }
-
-        const result = await response.json();
-
-        setNeedsVerification(false);
-        setPendingEmail('');
-
-        return result;
     };
 
     const logout = () => {
         setUser(null);
-        // return supabase.auth.signOut();
     };
 
     const value = {
         user,
+        setUser,
         login,
         register,
         logout,
-        verifyToken,
-        loading,
-        isPasswordRecovery,
-        setIsPasswordRecovery,
-        needsVerification,
-        setNeedsVerification,
-        pendingEmail
+        loading
     };
 
     return (
