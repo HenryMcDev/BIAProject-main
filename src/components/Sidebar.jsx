@@ -1,16 +1,24 @@
 import React from 'react';
-import { Home, User, LogOut, Menu } from 'lucide-react';
+import { Home, User, LogOut, Menu, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
-    const { user, logout } = useAuth();
+    const { user, logout, userProfile } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
     const menuItems = [
-        { icon: Home, label: 'Home', path: '/' },
+        { icon: Home, label: 'Home', path: '/', allowedRoles: ['Developer', 'Desenvolvedor', 'Admin', 'Marketing', 'Vendedor', 'Consultor'] },
+        { icon: Shield, label: 'Painel Admin', path: '/admin', allowedRoles: ['Developer', 'Desenvolvedor', 'Admin'] }
     ];
+
+    const cargo = userProfile?.cargo || sessionStorage.getItem('usuario_cargo') || 'Vendedor';
+
+    let visibleItems = menuItems;
+    if (cargo !== 'Developer') {
+        visibleItems = menuItems.filter(item => item.allowedRoles?.includes(cargo));
+    }
 
     return (
         <aside className={`fixed left-0 top-0 h-screen bg-[#000d1a] border-r border-slate-800 text-white flex flex-col justify-between shadow-2xl z-50 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} hidden md:flex`}>
@@ -33,7 +41,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-                {menuItems.map((item, index) => {
+                {visibleItems.map((item, index) => {
                     const isActive = location.pathname === item.path;
                     return (
                         <button
@@ -71,6 +79,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 {user?.user_metadata?.full_name || 'Usuário BIT'}
                             </p>
                             <p className="text-[11px] text-white/50 truncate font-medium mt-0.5">{user?.email}</p>
+                            <p className="text-xs text-[#FFCC00] font-medium mt-0.5">{userProfile?.cargo || 'Aguardando cargo...'}</p>
                         </div>
                     )}
 

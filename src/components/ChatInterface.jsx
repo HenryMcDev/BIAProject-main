@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, UserCheck, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendMessageToOpenRouter } from '../services/openRouter';
+import axios from 'axios';
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://hook.us2.make.com/dummy-webhook-url-replace-me';
 
@@ -96,7 +96,24 @@ const ChatInterface = ({ selectedLead }) => {
 
         setMessages(newMessages);
         setInput('');
+        setLoading(true);
 
+        try {
+            const payload = { message: input, history: messages };
+            const response = await axios.post(import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL || 'YOUR_N8N_WEBHOOK_URL_HERE', payload);
+            
+            const aiText = response.data.output || response.data.reply || response.data.text || 'Resposta recebida, mas formato não reconhecido.';
+            const aiResponse = { role: 'assistant', content: aiText };
+            
+            setMessages(prev => [...prev, aiResponse]);
+        } catch (err) {
+            setMessages(prev => [...prev, {
+                role: 'system',
+                content: err.response?.data?.message || err.message || 'Erro ao processar resposta do servidor.'
+            }]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

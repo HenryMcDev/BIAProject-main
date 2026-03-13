@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import PromptLibrary from './pages/PromptLibrary';
 import ScheduleCalendar from './pages/ScheduleCalendar';
+import DatabaseTest from './pages/DatabaseTest';
 // import SupabaseDiagnostic from './components/SupabaseDiagnostic';
 import ResetPasswordModal from './components/ResetPasswordModal';
 
@@ -29,9 +30,13 @@ const AppContent = () => {
     <>
       <ResetPasswordModal />
       <Routes>
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        <Route path="/test-db" element={<DatabaseTest />} />
+        
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" replace />} />
 
-        <Route path="/" element={
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route path="/dashboard" element={
           <ProtectedRoute>
             <Layout>
               <Home />

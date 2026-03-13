@@ -6,12 +6,43 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setUser(null);
         setLoading(false);
     }, []);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (user) {
+                try {
+                    const res = await fetch('http://localhost:3001/api/autorizacao', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: user.email })
+                    });
+                    const data = await res.json();
+                    if (data && data.sucesso) {
+                        sessionStorage.setItem('usuario_cargo', data.cargo);
+                        sessionStorage.setItem('usuario_id', data.user_id);
+                        setUserProfile(data);
+                    } else {
+                        sessionStorage.removeItem('usuario_cargo');
+                        sessionStorage.removeItem('usuario_id');
+                        setUserProfile(null);
+                        console.warn("API Access Blocked:", data.mensagem);
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar perfil no PHP API', error);
+                }
+            } else {
+                setUserProfile(null);
+            }
+        };
+        fetchProfile();
+    }, [user]);
 
     const login = async (email, password) => {
         try {
@@ -40,8 +71,16 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (email, password, fullName) => {
+    const register = async (email, password, fullName, securityKey) => {
         try {
+            const n8nRes = await fetch(import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'validate_key', securityKey })
+            });
+            const validation = await n8nRes.json();
+            if (!validation.isValid) throw new Error('Chave de Segurança inválida ou expirada pelo n8n.');
+
             const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -79,7 +118,8 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        loading
+        loading,
+        userProfile
     };
 
     return (
