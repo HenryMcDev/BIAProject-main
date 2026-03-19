@@ -10,7 +10,20 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setUser(null);
+        const storedUser = sessionStorage.getItem('@BIT_USER');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                if (parsedUser && parsedUser.status === "liberado") {
+                    setUser(parsedUser);
+                } else {
+                    sessionStorage.removeItem('@BIT_USER');
+                }
+            } catch (error) {
+                console.error("Error parsing stored user:", error);
+                sessionStorage.removeItem('@BIT_USER');
+            }
+        }
         setLoading(false);
     }, []);
 
@@ -25,7 +38,7 @@ export const AuthProvider = ({ children }) => {
                         body: JSON.stringify({ email: user.email, acao: 'get_profile' })
                     });
                     const data = await res.json();
-                    
+
                     // Validação da chave de sucesso do payload
                     if (data && (data.sucesso || data.authenticated)) {
                         // Guarda informações na sessão e libera o perfil para o resto do App
@@ -68,6 +81,7 @@ export const AuthProvider = ({ children }) => {
             if (data && data.authenticated === true) {
                 const userData = data.user || { email: email || "" };
                 setUser(userData);
+                sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
                 return { user: userData };
             } else {
                 throw new Error(data.message || 'Erro ao realizar login.');
@@ -103,6 +117,7 @@ export const AuthProvider = ({ children }) => {
             if (data && data.authenticated === true) {
                 const userData = data.user || { email: email || "", fullName: fullName || "" };
                 setUser(userData);
+                sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
                 return { user: userData };
             } else if (data && data.success === false) {
                 throw new Error(data.message || 'Erro ao realizar cadastro.');
@@ -116,6 +131,10 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         setUser(null);
+        setUserProfile(null);
+        sessionStorage.removeItem('@BIT_USER');
+        sessionStorage.removeItem('usuario_cargo');
+        sessionStorage.removeItem('usuario_id');
     };
 
     const value = {
