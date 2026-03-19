@@ -3,12 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import CreateArt from './pages/CreateArt';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
 
-import PromptLibrary from './pages/PromptLibrary';
 import ScheduleCalendar from './pages/ScheduleCalendar';
-import DatabaseTest from './pages/DatabaseTest';
 // import SupabaseDiagnostic from './components/SupabaseDiagnostic';
 import ResetPasswordModal from './components/ResetPasswordModal';
 
@@ -30,8 +28,6 @@ const AppContent = () => {
     <>
       <ResetPasswordModal />
       <Routes>
-        <Route path="/test-db" element={<DatabaseTest />} />
-        
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" replace />} />
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -44,21 +40,7 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
 
-        <Route path="/create" element={
-          <ProtectedRoute>
-            <Layout>
-              <CreateArt />
-            </Layout>
-          </ProtectedRoute>
-        } />
 
-        <Route path="/library" element={
-          <ProtectedRoute>
-            <Layout>
-              <PromptLibrary />
-            </Layout>
-          </ProtectedRoute>
-        } />
 
         <Route path="/schedule" element={
           <ProtectedRoute>
@@ -79,7 +61,9 @@ const AppContent = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ChatProvider>
+        <AppContent />
+      </ChatProvider>
     </AuthProvider>
   );
 }

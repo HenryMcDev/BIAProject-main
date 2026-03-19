@@ -18,24 +18,30 @@ export const AuthProvider = ({ children }) => {
         const fetchProfile = async () => {
             if (user) {
                 try {
-                    const res = await fetch('http://localhost:3001/api/autorizacao', {
+                    // Nova chamada remota apontando para a sua VPS n8n
+                    const res = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/autorizacao', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user.email })
+                        body: JSON.stringify({ email: user.email, acao: 'get_profile' })
                     });
                     const data = await res.json();
-                    if (data && data.sucesso) {
-                        sessionStorage.setItem('usuario_cargo', data.cargo);
-                        sessionStorage.setItem('usuario_id', data.user_id);
+                    
+                    // Validação da chave de sucesso do payload
+                    if (data && (data.sucesso || data.authenticated)) {
+                        // Guarda informações na sessão e libera o perfil para o resto do App
+                        sessionStorage.setItem('usuario_cargo', data.cargo || 'admin');
+                        sessionStorage.setItem('usuario_id', data.user_id || '1');
                         setUserProfile(data);
                     } else {
+                        // Em caso de falha na autorização, limpa o acesso
                         sessionStorage.removeItem('usuario_cargo');
                         sessionStorage.removeItem('usuario_id');
                         setUserProfile(null);
-                        console.warn("API Access Blocked:", data.mensagem);
+                        console.warn("Acesso não autorizado pelo n8n:", data);
                     }
                 } catch (error) {
-                    console.error('Erro ao buscar perfil no PHP API', error);
+                    console.error('Erro ao buscar perfil remoto no n8n:', error);
+                    setUserProfile(null);
                 }
             } else {
                 setUserProfile(null);

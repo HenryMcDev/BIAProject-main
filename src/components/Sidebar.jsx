@@ -1,10 +1,12 @@
 import React from 'react';
-import { Home, User, LogOut, Menu, Shield } from 'lucide-react';
+import { Home, User, LogOut, Menu, Shield, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const { user, logout, userProfile } = useAuth();
+    const { contacts, activeContact, setActiveContact } = useChat();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -62,6 +64,39 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                     );
                 })}
             </nav>
+
+            {/* Contacts List */}
+            {contacts && contacts.length > 0 && (
+                <div className="px-3 pb-4 pt-2 shrink-0 border-b border-white/10">
+                    {!isCollapsed && (
+                        <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 px-3">
+                            Contatos
+                        </h3>
+                    )}
+                    <nav className="space-y-1">
+                        {contacts.map((contact, index) => {
+                            const isContactActive = activeContact?.phone === contact.phone;
+                            return (
+                                <button
+                                    key={`contact-${index}`}
+                                    onClick={() => setActiveContact(contact)}
+                                    title={isCollapsed ? contact.name : undefined}
+                                    className={`w-full flex items-center rounded-xl transition-all duration-300 group ${isCollapsed ? 'justify-center p-3' : 'space-x-4 px-4 py-3.5'
+                                        }  ${isContactActive
+                                            ? 'bg-[#005696] text-[#FFCC00] outline outline-[#FFCC00]/30 shadow-sm'
+                                            : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <MessageSquare size={22} className={`shrink-0 transition-colors ${isContactActive ? 'text-[#FFCC00]' : 'group-hover:text-[#FFCC00]'}`} />
+                                    {!isCollapsed && (
+                                        <span className="font-semibold text-[15px] tracking-wide truncate">{contact.name}</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
+                </div>
+            )}
 
             {/* User Profile */}
             <div className="p-3 border-t border-white/10 shrink-0">
