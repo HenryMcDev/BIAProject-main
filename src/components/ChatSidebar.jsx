@@ -1,163 +1,101 @@
-import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { ArrowLeft } from 'lucide-react';
-import ChatInterface from './ChatInterface';
+import React, { useState, useEffect } from 'react';
+import { CheckCheck, UserCircle, Search, MessageSquarePlus, MoreVertical } from 'lucide-react';
 
-function ChatSidebar() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [contactsList, setContactsList] = useState([]);
+const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
+  const [contacts, setContacts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const scrollbarHiddenClass = "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-600";
 
-  // Initial Contacts Fetch
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        setLoading(true);
-        const response = await axios.get('https://automacao-n8n.dczbc9.easypanel.host/webhook/historico-mensagens');
-
-        let contactsArray = [];
-        if (Array.isArray(response.data)) {
-          const sortedData = [...response.data].sort((a, b) => new Date(b.data_envio || 0) - new Date(a.data_envio || 0));
-
-          const mapped = sortedData
-            .filter(item => item && item.telefone_cliente)
-            .map(item => ({
-              remetente: item.remetente || item.telefone_cliente,
-              telefone_cliente: item.telefone_cliente,
-              conteudo: item.conteudo || '',
-              data_envio: item.data_envio || ''
-            }));
-
-          const seen = new Set();
-          contactsArray = mapped.filter(c => {
-            if (seen.has(c.telefone_cliente)) return false;
-            seen.add(c.telefone_cliente);
-            return true;
-          });
+        const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatsiderbar');
+        if (response.ok) {
+          const data = await response.json();
+          setContacts(Array.isArray(data) ? data : []);
+        } else {
+          setContacts([]);
         }
-        setContactsList(contactsArray);
-      } catch (err) {
-        console.error('Error fetching contacts:', err);
-        setError('Erro ao carregar lista de contatos.');
+      } catch (error) {
+        console.error("Erro ao buscar contatos:", error);
+        setContacts([]);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchContacts();
+    const interval = setInterval(fetchContacts, 15000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleCarregarTeste = () => {
-    const testPhone = '5534999548090';
-    setSelectedContact(testPhone);
-  };
-
-  // Select first contact by default
-  useEffect(() => {
-    if (contactsList.length > 0 && !selectedContact) {
-      setSelectedContact(contactsList[0].telefone_cliente);
-    }
-  }, [contactsList, selectedContact]);
-
-  const formatTime = (ts) => {
-    try {
-      return new Intl.DateTimeFormat('pt-BR', {
-        dateStyle: 'short',
-        timeStyle: 'short'
-      }).format(new Date(ts));
-    } catch {
-      return ts;
-    }
-  };
-
   return (
-    <div className="flex h-full w-full bg-gray-50 text-gray-900 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 flex flex-col shadow-sm z-10 shrink-0 transition-all duration-300 ${selectedContact ? 'hidden md:flex md:w-80' : 'w-full md:w-80 flex'}`}>
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-            Contatos
-          </h2>
-          <button
-            onClick={handleCarregarTeste}
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-sm transition-colors font-medium active:scale-95 shrink-0"
-            title="Carregar telefone de teste: 5534999548090"
-          >
-            Carregar Teste
-          </button>
+    <div className="w-80 h-full bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 font-montserrat z-20">
+      {/* Sidebar Header */}
+      <div className="h-16 p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/50 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#001f3f] flex items-center justify-center font-bold text-[#FFCC00] shadow-md border border-[#FFCC00]/20">
+            BIT
+          </div>
+          <h2 className="text-slate-100 font-semibold tracking-wide">Contatos</h2>
         </div>
+        <div className="flex items-center gap-3 text-slate-400">
+          <button className="hover:text-slate-200 transition-colors"><MessageSquarePlus className="w-5 h-5" /></button>
+          <button className="hover:text-slate-200 transition-colors"><MoreVertical className="w-5 h-5" /></button>
+        </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto w-full">
-          {loading ? (
-            <div className="p-6 flex flex-col gap-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-12 bg-gray-200 rounded-lg animate-pulse w-full"></div>
-              ))}
+      {/* Search Bar */}
+      <div className="p-4 border-b border-slate-800 bg-slate-900 shrink-0">
+        <div className="bg-slate-800 rounded-lg flex items-center px-3 h-10">
+          <Search className="w-4 h-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Pesquisar conversa" 
+            className="bg-transparent border-none outline-none w-full ml-3 text-sm text-slate-200 placeholder-slate-500"
+          />
+        </div>
+      </div>
+
+      {/* Contacts List */}
+      <div className={`flex-1 overflow-y-auto ${scrollbarHiddenClass}`}>
+        <div className="flex flex-col gap-1 p-2">
+          {isLoading ? (
+            <div className="flex justify-center p-4">
+              <div className="w-8 h-8 rounded-full border-4 border-[#FFCC00] border-t-transparent animate-spin"></div>
             </div>
-          ) : error ? (
-            <div className="p-4 text-center text-red-500 text-sm">
-              Erro ao carregar contatos.
-            </div>
-          ) : contactsList.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">
-              Nenhum contato encontrado.
-            </div>
+          ) : contacts && contacts.length > 0 ? (
+            contacts.map(contact => {
+              const isSelected = selectedContact?.id === contact.id;
+
+              return (
+                <div 
+                  key={contact.id || Math.random()} 
+                  onClick={() => setSelectedContact(contact)}
+                  className={`flex items-center gap-3 p-3 cursor-pointer transition-colors rounded-lg overflow-hidden ${
+                    isSelected 
+                      ? 'bg-slate-800 border-l-4 border-[#FFCC00]' 
+                      : 'hover:bg-slate-800/80 border-l-4 border-transparent'
+                  }`}
+                >
+                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-white font-bold">{contact.remetente ? contact.remetente.charAt(0).toUpperCase() : "C"}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-semibold truncate">{contact.remetente || "Cliente"}</h3>
+                    <p className="text-xs text-gray-400 truncate">{contact.conteudo}</p>
+                  </div>
+                </div>
+              );
+            })
           ) : (
-            <ul className="flex flex-col w-full">
-              {contactsList.map(contact => (
-                <li key={contact.telefone_cliente} className="w-full">
-                  <button
-                    onClick={() => setSelectedContact(contact.telefone_cliente)}
-                    className={`w-full text-left px-3 py-3 transition-colors flex items-center gap-3 border-b border-gray-100
-                      ${selectedContact === contact.telefone_cliente ? 'bg-[#f0f2f5]' : 'bg-white hover:bg-[#f5f6f6]'}`}
-                  >
-                    {/* User Avatar SVG */}
-                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
-                      <svg className="w-10 h-10 text-gray-400 mt-2" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                      </svg>
-                    </div>
-
-                    {/* Name, Time, and Message Column */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <p className="text-[15px] font-medium text-gray-800 truncate pr-2">
-                          {contact.remetente}
-                        </p>
-                        {contact.data_envio && (
-                          <p className="text-[11px] text-gray-500 shrink-0 font-medium">
-                            {formatTime(contact.data_envio)}
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">
-                        {contact.conteudo || contact.telefone_cliente}
-                      </p>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+             <p className="text-center text-slate-500 p-4">Nenhum contato encontrado</p>
           )}
         </div>
       </div>
-
-      {/* Main Panel */}
-      <div className={`flex-1 bg-white relative ${selectedContact ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
-        {selectedContact && (
-          <button 
-              onClick={() => setSelectedContact(null)}
-              className="md:hidden absolute top-4 left-4 z-50 p-2 bg-white rounded-full shadow-md text-slate-600 hover:text-slate-800"
-          >
-              <ArrowLeft size={20} />
-          </button>
-        )}
-        <ChatInterface selectedContact={selectedContact} />
-      </div>
     </div>
   );
-}
+};
 
 export default ChatSidebar;
