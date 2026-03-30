@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import PainelAdmin from './pages/PainelAdmin';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 
@@ -36,6 +37,14 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <Home />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <Layout>
+              <PainelAdmin />
             </Layout>
           </ProtectedRoute>
         } />

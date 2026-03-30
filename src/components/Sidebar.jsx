@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, User, LogOut, Menu, Shield, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -7,8 +7,56 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const { user, logout, userProfile } = useAuth();
     const { contacts, activeContact, setActiveContact } = useChat();
+    const [perfil, setPerfil] = useState({ nome: 'Carregando...', cargo: 'Aguarde...' });
     const navigate = useNavigate();
     const location = useLocation();
+
+    useEffect(() => {
+        const buscarPerfilUnico = async () => {
+            const emailUsuario = localStorage.getItem('emailUsuario');
+            const cachePerfil = localStorage.getItem('perfilUsuarioBIT');
+
+            if (cachePerfil) {
+                try {
+                    const parsedData = JSON.parse(cachePerfil);
+                    setPerfil(parsedData);
+                    return;
+                } catch (e) {
+                    console.error("Erro ao parsear perfil do cache:", e);
+                }
+            }
+
+            if (!emailUsuario) {
+                setPerfil({ nome: 'Usuário não logado', cargo: 'Sem acesso' });
+                return;
+            }
+
+            try {
+                const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: "consultar_perfil",
+                        email: emailUsuario
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data && data.nome) {
+                    const novoPerfil = { nome: data.nome, cargo: data.funcao || data.cargo || 'Membro' };
+                    setPerfil(novoPerfil);
+                    localStorage.setItem('perfilUsuarioBIT', JSON.stringify(novoPerfil));
+                } else {
+                    setPerfil({ nome: 'Usuário BIT', cargo: 'Não encontrado' });
+                }
+            } catch (error) {
+                setPerfil({ nome: 'Usuário Offline', cargo: 'Erro de conexão' });
+            }
+        };
+
+        buscarPerfilUnico();
+    }, []);
 
     const menuItems = [
         { icon: Home, label: 'Home', path: '/', allowedRoles: ['Developer', 'Desenvolvedor', 'Admin', 'Marketing', 'Vendedor', 'Consultor'] },
@@ -109,12 +157,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                     </div>
 
                     {!isCollapsed && (
-                        <div className="flex-1 min-w-0 mr-1">
-                            <p className="text-sm font-bold text-white leading-tight truncate">
-                                {user?.user_metadata?.full_name || 'Usuário BIT'}
-                            </p>
-                            <p className="text-[11px] text-white/50 truncate font-medium mt-0.5">{user?.email}</p>
-                            <p className="text-xs text-[#FFCC00] font-medium mt-0.5">{userProfile?.cargo || 'Aguardando cargo...'}</p>
+                        <div className="flex-1 min-w-0 mr-1 flex flex-col">
+                            <span className="text-white font-bold text-sm truncate">{perfil.nome}</span>
+                            <span className="text-[#fccb06] text-xs truncate">{perfil.cargo}</span>
                         </div>
                     )}
 

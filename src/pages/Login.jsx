@@ -31,6 +31,43 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    const [senha, setSenha] = useState('');
+    const [confirmarSenha, setConfirmarSenha] = useState('');
+    const [dadosRegistro, setDadosRegistro] = useState({ securityKey: '', email: '' });
+
+    const handleCriarSenhaFinal = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (senha !== confirmarSenha) {
+            setError('As senhas não coincidem.');
+            return;
+        }
+
+        if (senha.length < 6) {
+            setError('A senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const payload = { action: "criar_senha", email: dadosRegistro.email, senha: senha };
+            const response = await axios.post('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', payload);
+
+            const data = response.data;
+            if (data?.sucesso || data?.valido || response.status === 200) {
+                window.location.href = '/login';
+            } else {
+                setError(data?.mensagem || data?.error || 'Erro ao criar a senha.');
+            }
+        } catch (err) {
+            setError(err.response?.data?.mensagem || 'Erro de conexão.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -51,6 +88,9 @@ const Login = () => {
                     localStorage.setItem('user_session', 'active');
                     localStorage.setItem('nomeUsuario', response.data[0].nome || email.split('@')[0]);
                     setError('');
+                    // Clear previous profile cache and set current user identity for Sidebar sync
+                    localStorage.setItem('emailUsuario', email);
+                    localStorage.removeItem('perfilUsuarioBIT');
                     navigate('/dashboard'); // replacing Maps('/dashboard') with useNavigate
                 } else if (response.data && response.data.status === "liberado") {
                     // Fallback in case it's not an array
@@ -58,6 +98,9 @@ const Login = () => {
                     localStorage.setItem('user_session', 'active');
                     localStorage.setItem('nomeUsuario', response.data.nome || email.split('@')[0]);
                     setError('');
+                    // Clear previous profile cache and set current user identity for Sidebar sync
+                    localStorage.setItem('emailUsuario', email);
+                    localStorage.removeItem('perfilUsuarioBIT');
                     navigate('/dashboard');
                 } else {
                     const errorMsg = Array.isArray(response.data) ? response.data[0]?.mensagem : response.data?.mensagem;
@@ -66,7 +109,7 @@ const Login = () => {
             }
             else if (view === 'register') {
                 // REGISTER VIEW using Webhook
-                const payload = { action: "cadastro", fullName, cpf, email, role, securityKey };
+                const payload = { action: "cadastro", fullName, cpf, email, role, securityKey: dadosRegistro.securityKey };
                 const response = await axios.post(WEBHOOK_URL, payload);
 
                 if (response.data && response.data.status === "liberado") {
@@ -143,7 +186,7 @@ const Login = () => {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={view === 'activate' ? handleCriarSenhaFinal : handleSubmit} className="space-y-4">
 
                             {view === 'register' && (
                                 <>
@@ -190,7 +233,10 @@ const Login = () => {
                                             <input
                                                 type="email"
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                onChange={(e) => {
+                                                    setEmail(e.target.value);
+                                                    setDadosRegistro({ ...dadosRegistro, email: e.target.value });
+                                                }}
                                                 placeholder="seu@email.com"
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
                                                 required
@@ -226,26 +272,19 @@ const Login = () => {
                                                 <Lock size={20} className="text-slate-400" />
                                             </div>
                                             <input
-                                                type={showSecurityKey ? "text" : "password"}
-                                                value={securityKey}
-                                                onChange={(e) => setSecurityKey(e.target.value)}
+                                                type="password"
+                                                value={dadosRegistro.securityKey || ''}
+                                                onChange={(e) => setDadosRegistro({ ...dadosRegistro, securityKey: e.target.value })}
                                                 placeholder="Sua Chave Secreta"
-                                                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
+                                                className="w-full bg-blue-50/50 border border-blue-100 rounded p-3 text-gray-700 pl-10"
                                                 required
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowSecurityKey(!showSecurityKey)}
-                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
-                                            >
-                                                {showSecurityKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
                                         </div>
                                     </div>
                                 </>
                             )}
 
-                            {(view === 'login' || view === 'activate') && (
+                            {view === 'login' && (
                                 <>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-700">Email</label>
@@ -256,7 +295,10 @@ const Login = () => {
                                             <input
                                                 type="email"
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                onChange={(e) => {
+                                                    setEmail(e.target.value);
+                                                    setDadosRegistro({ ...dadosRegistro, email: e.target.value });
+                                                }}
                                                 placeholder="seu@email.com"
                                                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
                                                 required
@@ -265,9 +307,7 @@ const Login = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-700">
-                                            {view === 'activate' ? 'Senha (Nova Senha)' : 'Senha'}
-                                        </label>
+                                        <label className="text-sm font-medium text-slate-700">Senha</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <Lock size={20} className="text-slate-400" />
@@ -276,7 +316,7 @@ const Login = () => {
                                                 type={showPassword ? "text" : "password"}
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                placeholder={view === 'activate' ? "Nova Senha" : "********"}
+                                                placeholder="********"
                                                 className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
                                                 required
                                                 minLength={6}
@@ -294,30 +334,58 @@ const Login = () => {
                             )}
 
                             {view === 'activate' && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Confirmar Senha</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Lock size={20} className="text-slate-400" />
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Email</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Mail size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                value={dadosRegistro.email}
+                                                readOnly
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
+                                            />
                                         </div>
-                                        <input
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            placeholder="********"
-                                            className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
-                                            required
-                                            minLength={6}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
-                                        >
-                                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
                                     </div>
-                                </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Senha (Nova Senha)</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Lock size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={senha}
+                                                onChange={(e) => setSenha(e.target.value)}
+                                                placeholder="Nova Senha"
+                                                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
+                                                required
+                                                minLength={6}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Confirmar Senha</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Lock size={20} className="text-slate-400" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={confirmarSenha}
+                                                onChange={(e) => setConfirmarSenha(e.target.value)}
+                                                placeholder="********"
+                                                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005696]/50 focus:border-[#005696] transition-all"
+                                                required
+                                                minLength={6}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
                             )}
 
                             <button
