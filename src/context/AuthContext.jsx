@@ -16,6 +16,9 @@ export const AuthProvider = ({ children }) => {
                 const parsedUser = JSON.parse(storedUser);
                 if (parsedUser && parsedUser.status === "liberado") {
                     setUser(parsedUser);
+                    if (parsedUser.email) {
+                        localStorage.setItem("userEmail", parsedUser.email);
+                    }
                 } else {
                     sessionStorage.removeItem('@BIT_USER');
                 }
@@ -82,6 +85,7 @@ export const AuthProvider = ({ children }) => {
                 const userData = data.user || { email: email || "" };
                 setUser(userData);
                 sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
+                localStorage.setItem("userEmail", userData.email);
                 return { user: userData };
             } else {
                 throw new Error(data.message || 'Erro ao realizar login.');
@@ -118,6 +122,7 @@ export const AuthProvider = ({ children }) => {
                 const userData = data.user || { email: email || "", fullName: fullName || "" };
                 setUser(userData);
                 sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
+                localStorage.setItem("userEmail", userData.email);
                 return { user: userData };
             } else if (data && data.success === false) {
                 throw new Error(data.message || 'Erro ao realizar cadastro.');
@@ -135,6 +140,7 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('@BIT_USER');
         sessionStorage.removeItem('usuario_cargo');
         sessionStorage.removeItem('usuario_id');
+        localStorage.removeItem("userEmail");
     };
 
     const value = {

@@ -86,6 +86,7 @@ const Login = () => {
                 if (Array.isArray(response.data) && response.data.length > 0 && response.data[0].status === "liberado") {
                     setUser(response.data[0]); // pass to AuthContext
                     localStorage.setItem('user_session', 'active');
+                    localStorage.setItem('userEmail', email);
                     localStorage.setItem('nomeUsuario', response.data[0].nome || email.split('@')[0]);
                     setError('');
                     // Clear previous profile cache and set current user identity for Sidebar sync
@@ -96,6 +97,7 @@ const Login = () => {
                     // Fallback in case it's not an array
                     setUser(response.data);
                     localStorage.setItem('user_session', 'active');
+                    localStorage.setItem('userEmail', email);
                     localStorage.setItem('nomeUsuario', response.data.nome || email.split('@')[0]);
                     setError('');
                     // Clear previous profile cache and set current user identity for Sidebar sync

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DeleteSecurityKey from '../components/DeleteSecurityKey';
 
 const PainelAdmin = () => {
   const [chaves, setChaves] = useState([]);
@@ -110,12 +111,13 @@ const PainelAdmin = () => {
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Gerado Por</th>
                   <th className="py-3 px-4">Data Geração</th>
+                  <th className="py-3 px-4 text-right">AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
                 {chaves.length > 0 ? (
                   chaves.map((chave, index) => (
-                    <tr key={chave.id || index} className="border-b border-gray-700 hover:bg-gray-800 transition-colors">
+                    <tr key={chave.id || index} className="border-b border-gray-700 hover:bg-white/5 transition-colors">
                       <td className="py-4 px-4 text-sm text-gray-300">{chave.funcionario_destino}</td>
                       <td className="py-4 px-4 text-sm font-mono text-gray-400">{chave.chave_gerada}</td>
                       <td className="py-4 px-4">
@@ -127,11 +129,19 @@ const PainelAdmin = () => {
                       <td className="py-4 px-4 text-sm text-gray-300">
                         {chave.data_geracao ? new Date(chave.data_geracao).toLocaleString('pt-BR') : '-'}
                       </td>
+                      <td className="py-4 px-4 flex justify-end">
+                        <DeleteSecurityKey 
+                          encryptedKey={chave.id || chave.chave_gerada} 
+                          onDeleteSuccess={() => {
+                            setChaves(prev => prev.filter(c => (c.id || c.chave_gerada) !== (chave.id || chave.chave_gerada)));
+                          }}
+                        />
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-gray-500 text-sm">
+                    <td colSpan="6" className="py-8 text-center text-gray-500 text-sm">
                       Nenhuma chave registrada.
                     </td>
                   </tr>
