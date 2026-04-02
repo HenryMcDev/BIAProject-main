@@ -5,70 +5,19 @@ import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
-    const { user, logout, userProfile } = useAuth();
+    const { user, logout } = useAuth();
     const { contacts, activeContact, setActiveContact } = useChat();
-    const [perfil, setPerfil] = useState({ nome: 'Carregando...', cargo: 'Aguarde...' });
     const navigate = useNavigate();
     const location = useLocation();
 
-    useEffect(() => {
-        const buscarPerfilUnico = async () => {
-            const emailUsuario = localStorage.getItem('emailUsuario');
-            const cachePerfil = localStorage.getItem('perfilUsuarioBIT');
-
-            if (cachePerfil) {
-                try {
-                    const parsedData = JSON.parse(cachePerfil);
-                    setPerfil(parsedData);
-                    return;
-                } catch (e) {
-                    console.error("Erro ao parsear perfil do cache:", e);
-                }
-            }
-
-            if (!emailUsuario) {
-                setPerfil({ nome: 'Usuário não logado', cargo: 'Sem acesso' });
-                return;
-            }
-
-            try {
-                const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: "consultar_perfil",
-                        email: emailUsuario
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data && data.nome) {
-                    const novoPerfil = { nome: data.nome, cargo: data.funcao || data.cargo || 'Membro' };
-                    setPerfil(novoPerfil);
-                    localStorage.setItem('perfilUsuarioBIT', JSON.stringify(novoPerfil));
-                } else {
-                    setPerfil({ nome: 'Usuário BIT', cargo: 'Não encontrado' });
-                }
-            } catch (error) {
-                setPerfil({ nome: 'Usuário Offline', cargo: 'Erro de conexão' });
-            }
-        };
-
-        buscarPerfilUnico();
-    }, []);
+    const isAdmin = user && (user.nivelAcesso === 'total' || user.funcao?.toLowerCase() === 'desenvolvedor');
 
     const menuItems = [
-        { icon: Home, label: 'Home', path: '/', allowedRoles: ['Developer', 'Desenvolvedor', 'Admin', 'Marketing', 'Vendedor', 'Consultor'] },
-        { icon: Shield, label: 'Painel Admin', path: '/admin', allowedRoles: ['Developer', 'Desenvolvedor', 'Admin'] }
+        { icon: Home, label: 'Home', path: '/' },
+        ...(isAdmin ? [{ icon: Shield, label: 'Painel Admin', path: '/admin' }] : [])
     ];
 
-    const cargo = userProfile?.cargo || sessionStorage.getItem('usuario_cargo') || 'Vendedor';
-
     let visibleItems = menuItems;
-    if (cargo !== 'Developer') {
-        visibleItems = menuItems.filter(item => item.allowedRoles?.includes(cargo));
-    }
 
     return (
         <aside className={`fixed left-0 top-0 h-screen bg-[#000d1a] border-r border-slate-800 text-white flex flex-col justify-between shadow-2xl z-50 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} hidden md:flex`}>
@@ -158,8 +107,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
                     {!isCollapsed && (
                         <div className="flex-1 min-w-0 mr-1 flex flex-col">
-                            <span className="text-white font-bold text-sm truncate">{perfil.nome}</span>
-                            <span className="text-[#fccb06] text-xs truncate">{perfil.cargo}</span>
+                            <span className="text-white font-bold text-sm truncate">{user?.nome || 'Usuário'}</span>
+                            <span className="text-[#fccb06] text-xs truncate">{user?.funcao || 'Membro'}</span>
                         </div>
                     )}
 

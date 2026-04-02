@@ -18,6 +18,17 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const isAdmin = user?.nivelAcesso === 'total' || user?.funcao?.toLowerCase() === 'desenvolvedor';
+
+  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  
+  return children;
+};
+
 const AppContent = () => {
   const { user, loading } = useAuth();
 
@@ -42,11 +53,11 @@ const AppContent = () => {
         } />
 
         <Route path="/admin" element={
-          <ProtectedRoute>
+          <AdminRoute>
             <Layout>
               <PainelAdmin />
             </Layout>
-          </ProtectedRoute>
+          </AdminRoute>
         } />
 
 

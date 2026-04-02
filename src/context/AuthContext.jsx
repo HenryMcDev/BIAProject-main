@@ -5,94 +5,24 @@ const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bit_session');
+            return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+            return null;
+        }
+    });
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = sessionStorage.getItem('@BIT_USER');
-        if (storedUser) {
-            try {
-                const parsedUser = JSON.parse(storedUser);
-                if (parsedUser && parsedUser.status === "liberado") {
-                    setUser(parsedUser);
-                    if (parsedUser.email) {
-                        localStorage.setItem("userEmail", parsedUser.email);
-                    }
-                } else {
-                    sessionStorage.removeItem('@BIT_USER');
-                }
-            } catch (error) {
-                console.error("Error parsing stored user:", error);
-                sessionStorage.removeItem('@BIT_USER');
-            }
-        }
         setLoading(false);
     }, []);
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (user) {
-                try {
-                    // Nova chamada remota apontando para a sua VPS n8n
-                    const res = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/autorizacao', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user.email, acao: 'get_profile' })
-                    });
-                    const data = await res.json();
-
-                    // Validação da chave de sucesso do payload
-                    if (data && (data.sucesso || data.authenticated)) {
-                        // Guarda informações na sessão e libera o perfil para o resto do App
-                        sessionStorage.setItem('usuario_cargo', data.cargo || 'admin');
-                        sessionStorage.setItem('usuario_id', data.user_id || '1');
-                        setUserProfile(data);
-                    } else {
-                        // Em caso de falha na autorização, limpa o acesso
-                        sessionStorage.removeItem('usuario_cargo');
-                        sessionStorage.removeItem('usuario_id');
-                        setUserProfile(null);
-                        console.warn("Acesso não autorizado pelo n8n:", data);
-                    }
-                } catch (error) {
-                    console.error('Erro ao buscar perfil remoto no n8n:', error);
-                    setUserProfile(null);
-                }
-            } else {
-                setUserProfile(null);
-            }
-        };
-        fetchProfile();
-    }, [user]);
-
-    const login = async (email, password) => {
-        try {
-            const response = await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    acao: 'login',
-                    email: email || "",
-                    password: password || "",
-                    fullName: ""
-                })
-            });
-
-            const data = await response.json();
-
-            if (data && data.authenticated === true) {
-                const userData = data.user || { email: email || "" };
-                setUser(userData);
-                sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
-                localStorage.setItem("userEmail", userData.email);
-                return { user: userData };
-            } else {
-                throw new Error(data.message || 'Erro ao realizar login.');
-            }
-        } catch (error) {
-            throw error;
-        }
+    const login = (userData) => {
+        localStorage.setItem('bit_session', JSON.stringify(userData));
+        setUser(userData);
     };
 
     const register = async (email, password, fullName, securityKey) => {
@@ -137,10 +67,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         setUserProfile(null);
-        sessionStorage.removeItem('@BIT_USER');
-        sessionStorage.removeItem('usuario_cargo');
-        sessionStorage.removeItem('usuario_id');
-        localStorage.removeItem("userEmail");
+        localStorage.removeItem('bit_session');
     };
 
     const value = {

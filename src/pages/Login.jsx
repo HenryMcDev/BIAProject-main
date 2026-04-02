@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
-    const { setUser } = useAuth(); // getting setUser from context
+    const { login } = useAuth(); // getting login from context
 
     // Using view to toggle 'login', 'register' and 'activate'
     const [view, setView] = useState('login');
@@ -73,6 +73,10 @@ const Login = () => {
         setError('');
         setSuccessMsg('');
         setLoading(true);
+        localStorage.removeItem('bit_session');
+        localStorage.removeItem('perfilUsuarioBIT');
+        sessionStorage.removeItem('usuario_cargo');
+        sessionStorage.removeItem('usuario_id');
 
         const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://automacao-n8n.dczbc9.easypanel.host/webhook/chatBIA';
 
@@ -83,27 +87,26 @@ const Login = () => {
                 const response = await axios.post(WEBHOOK_URL, payload);
                 console.log('n8n Response:', response.data);
 
-                if (Array.isArray(response.data) && response.data.length > 0 && response.data[0].status === "liberado") {
-                    setUser(response.data[0]); // pass to AuthContext
-                    localStorage.setItem('user_session', 'active');
-                    localStorage.setItem('userEmail', email);
-                    localStorage.setItem('nomeUsuario', response.data[0].nome || email.split('@')[0]);
+                const processLoginData = (payloadData) => {
+                    const userDataObj = {
+                         ...payloadData,
+                         email: payloadData.email || email,
+                         nome: payloadData.nome || payloadData.full_name || email.split('@')[0]
+                    };
+                    if (payloadData.funcao) userDataObj.funcao = payloadData.funcao;
+                    const nivel = payloadData.nivelAcesso || payloadData.nivel_de_acesso;
+                    if (nivel) userDataObj.nivelAcesso = nivel;
+
+                    login(userDataObj);
+                    console.log("BIT_AUTH_SYNC: Session established with access level:", userDataObj.nivelAcesso);
                     setError('');
-                    // Clear previous profile cache and set current user identity for Sidebar sync
-                    localStorage.setItem('emailUsuario', email);
-                    localStorage.removeItem('perfilUsuarioBIT');
-                    navigate('/dashboard'); // replacing Maps('/dashboard') with useNavigate
-                } else if (response.data && response.data.status === "liberado") {
-                    // Fallback in case it's not an array
-                    setUser(response.data);
-                    localStorage.setItem('user_session', 'active');
-                    localStorage.setItem('userEmail', email);
-                    localStorage.setItem('nomeUsuario', response.data.nome || email.split('@')[0]);
-                    setError('');
-                    // Clear previous profile cache and set current user identity for Sidebar sync
-                    localStorage.setItem('emailUsuario', email);
-                    localStorage.removeItem('perfilUsuarioBIT');
                     navigate('/dashboard');
+                };
+
+                if (Array.isArray(response.data) && response.data.length > 0 && response.data[0].status === "liberado") {
+                    processLoginData(response.data[0]);
+                } else if (response.data && response.data.status === "liberado") {
+                    processLoginData(response.data);
                 } else {
                     const errorMsg = Array.isArray(response.data) ? response.data[0]?.mensagem : response.data?.mensagem;
                     setError(errorMsg || 'Credenciais inválidas.');
