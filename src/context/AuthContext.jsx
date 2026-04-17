@@ -5,7 +5,7 @@ const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(() => {
+    const [session, setSession] = useState(() => {
         try {
             const saved = localStorage.getItem('bit_session');
             return saved ? JSON.parse(saved) : null;
@@ -13,6 +13,8 @@ export const AuthProvider = ({ children }) => {
             return null;
         }
     });
+
+    const [user, setUser] = useState(session);
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -20,9 +22,35 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = (userData) => {
-        localStorage.setItem('bit_session', JSON.stringify(userData));
+    const syncSession = (userData) => {
+        if (!userData) {
+            setSession(null);
+            setUser(null);
+            setUserProfile(null);
+            localStorage.removeItem('bit_session');
+            return;
+        }
+
+        const standardizedSession = {
+            id: userData.id || userData.usuario_id || '',
+            name: userData.user_metadata?.full_name || userData.nome || userData.fullName || 'Usuário',
+            fullName: userData.user_metadata?.full_name || userData.nome || userData.fullName || 'Usuário',
+            nome: userData.user_metadata?.full_name || userData.nome || userData.fullName || 'Usuário',
+            role: userData.user_metadata?.role || userData.funcao || 'User',
+            funcao: userData.user_metadata?.role || userData.funcao || 'User',
+            department: userData.user_metadata?.department || userData.departamento || userData.unidade || 'General',
+            unidade: userData.user_metadata?.department || userData.departamento || userData.unidade || 'General',
+            nivelAcesso: userData.nivelAcesso || userData.nivel_de_acesso || 'User',
+            email: userData.email || ''
+        };
+
+        setSession(standardizedSession);
         setUser(userData);
+        localStorage.setItem('bit_session', JSON.stringify({ user: standardizedSession }));
+    };
+
+    const login = (userData) => {
+        syncSession(userData);
     };
 
     const register = async (email, password, fullName, securityKey) => {
@@ -50,9 +78,7 @@ export const AuthProvider = ({ children }) => {
 
             if (data && data.authenticated === true) {
                 const userData = data.user || { email: email || "", fullName: fullName || "" };
-                setUser(userData);
-                sessionStorage.setItem('@BIT_USER', JSON.stringify(userData));
-                localStorage.setItem("userEmail", userData.email);
+                syncSession(userData);
                 return { user: userData };
             } else if (data && data.success === false) {
                 throw new Error(data.message || 'Erro ao realizar cadastro.');
@@ -65,12 +91,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        setUser(null);
-        setUserProfile(null);
-        localStorage.removeItem('bit_session');
+        syncSession(null);
     };
 
     const value = {
+        session,
+        syncSession,
         user,
         setUser,
         login,

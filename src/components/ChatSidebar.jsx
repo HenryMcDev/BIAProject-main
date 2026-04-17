@@ -4,7 +4,7 @@ import { CheckCheck, UserCircle, Search, MessageSquarePlus, MoreVertical } from 
 const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const scrollbarHiddenClass = "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-600";
 
   useEffect(() => {
@@ -50,9 +50,9 @@ const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
       <div className="p-4 border-b border-slate-800 bg-slate-900 shrink-0">
         <div className="bg-slate-800 rounded-lg flex items-center px-3 h-10">
           <Search className="w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar conversa" 
+          <input
+            type="text"
+            placeholder="Pesquisar conversa"
             className="bg-transparent border-none outline-none w-full ml-3 text-sm text-slate-200 placeholder-slate-500"
           />
         </div>
@@ -70,14 +70,13 @@ const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
               const isSelected = selectedContact?.id === contact.id;
 
               return (
-                <div 
-                  key={contact.id || Math.random()} 
+                <div
+                  key={contact.id || Math.random()}
                   onClick={() => setSelectedContact(contact)}
-                  className={`flex items-center gap-3 p-3 cursor-pointer transition-colors rounded-lg overflow-hidden ${
-                    isSelected 
-                      ? 'bg-slate-800 border-l-4 border-[#FFCC00]' 
-                      : 'hover:bg-slate-800/80 border-l-4 border-transparent'
-                  }`}
+                  className={`flex items-center gap-3 p-3 cursor-pointer transition-colors rounded-lg overflow-hidden ${isSelected
+                    ? 'bg-slate-800 border-l-4 border-[#FFCC00]'
+                    : 'hover:bg-slate-800/80 border-l-4 border-transparent'
+                    }`}
                 >
                   <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center mr-3">
                     <span className="text-white font-bold">{contact.remetente ? contact.remetente.charAt(0).toUpperCase() : "C"}</span>
@@ -90,7 +89,7 @@ const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
               );
             })
           ) : (
-             <p className="text-center text-slate-500 p-4">Nenhum contato encontrado</p>
+            <p className="text-center text-slate-500 p-4">Nenhum contato encontrado</p>
           )}
         </div>
       </div>

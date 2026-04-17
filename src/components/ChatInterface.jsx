@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Check, CheckCheck, MoreVertical, Paperclip, Phone, Video } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const formatTime = (ts) => {
   try {
@@ -11,6 +12,7 @@ const formatTime = (ts) => {
 };
 
 const ChatInterface = ({ contact }) => {
+  const { session } = useAuth();
   const selectedContact = contact;
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -22,7 +24,7 @@ const ChatInterface = ({ contact }) => {
       return;
     }
 
-    setChatMessages([]); 
+    setChatMessages([]);
 
     const fetchHistory = async () => {
       if (document.visibilityState !== 'visible') return;
@@ -50,18 +52,25 @@ const ChatInterface = ({ contact }) => {
   }, [chatMessages]);
 
   const handleSendMessage = async () => {
-    const textoDigitado = newMessage; 
+    const textoDigitado = newMessage;
     const customerPhone = selectedContact?.telefone_cliente || selectedContact?.phone || selectedContact?.id;
 
     if (!textoDigitado.trim() || !customerPhone) return;
 
+    // Fetch localized data for nested logic verification
+    let currentSessionData = {};
+    try {
+        currentSessionData = JSON.parse(localStorage.getItem('bit_session') || '{}');
+    } catch(e) {}
+    const currentUser = currentSessionData.user || {};
+
     const novaMensagemTemp = {
       id: Date.now(),
       telefone_cliente: customerPhone,
-      remetente: "BIA",
+      remetente: currentUser.fullName || currentUser.nome || "BIA",
       conteudo: textoDigitado.trim(),
       data_envio: new Date().toISOString(),
-      usuario_id: "b74f0449-1efe-11f1-bdd9-02420a000102"
+      usuario_id: currentUser.id || "unknown"
     };
 
     // Optimistic Update: Update UI first
@@ -69,11 +78,20 @@ const ChatInterface = ({ contact }) => {
     setNewMessage('');
 
     try {
+      const payload = {
+        ...novaMensagemTemp,
+        message: textoDigitado.trim(),
+        history: chatMessages,
+        idUsuarioLogado: currentUser.id || 'N/A',
+        setorUsuario: currentUser.unidade || currentUser.department || 'N/A',
+        user_context: currentUser
+      };
+
       // Background request to n8n
       await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatinterface', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(novaMensagemTemp)
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error("Erro ao enviar a mensagem para o n8n em background:", error);
@@ -95,7 +113,7 @@ const ChatInterface = ({ contact }) => {
       <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-[#0b141a] sticky top-0 shrink-0 z-20 w-full shadow-sm">
         <div className="flex items-center">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-             <span className="text-white font-bold">{selectedContact.remetente ? selectedContact.remetente.charAt(0).toUpperCase() : "C"}</span>
+            <span className="text-white font-bold">{selectedContact.remetente ? selectedContact.remetente.charAt(0).toUpperCase() : "C"}</span>
           </div>
           <div>
             <h2 className="text-white font-semibold">{selectedContact.remetente || "Cliente"}</h2>
@@ -125,8 +143,8 @@ const ChatInterface = ({ contact }) => {
             >
               <div
                 className={`${message.usuario_id === null
-                    ? 'bg-slate-800 text-white rounded-2xl rounded-tl-none'
-                    : 'bg-[#FFCC00] text-slate-900 rounded-2xl rounded-tr-none font-medium'
+                  ? 'bg-slate-800 text-white rounded-2xl rounded-tl-none'
+                  : 'bg-[#FFCC00] text-slate-900 rounded-2xl rounded-tr-none font-medium'
                   } p-3 max-w-[80%] relative group shadow-md`}
               >
                 <div className="flex flex-col">

@@ -5,12 +5,26 @@ import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
-    const { user, logout } = useAuth();
+    const { session, logout } = useAuth();
     const { contacts, activeContact, setActiveContact } = useChat();
     const navigate = useNavigate();
     const location = useLocation();
 
-    const isAdmin = user && (user.nivelAcesso === 'total' || user.funcao?.toLowerCase() === 'desenvolvedor');
+    const [debugSession, setDebugSession] = useState({});
+
+    useEffect(() => {
+        try {
+            const rawSession = localStorage.getItem('bit_session');
+            if (rawSession) {
+                const parsedData = JSON.parse(rawSession);
+                setDebugSession(parsedData.user || {});
+            }
+        } catch (e) {
+            console.warn('Could not parse bit_session for debug panel', e);
+        }
+    }, [session]);
+
+    const isAdmin = session && (session.role?.toLowerCase() === 'desenvolvedor' || session.role?.toLowerCase() === 'admin');
 
     const menuItems = [
         { icon: Home, label: 'Home', path: '/' },
@@ -95,20 +109,60 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 </div>
             )}
 
+            {/* Session Debug Panel */}
+            {!isCollapsed && (
+                <div className="bg-slate-900 border-l-4 border-[#FFCC00] p-3 my-4 mx-3 rounded-r-lg shadow-lg shrink-0">
+                    <h4 className="text-[10px] text-slate-500 font-bold mb-2 tracking-widest">
+                        DADOS DE SESSÃO
+                    </h4>
+                    <div className="text-sm font-bold text-white mb-1">
+                        {debugSession.fullName || debugSession.nome || debugSession.full_name || 'N/A'}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center overflow-hidden">
+                            <span className="text-[10px] text-[#FFCC00]/80 uppercase shrink-0">Cargo</span>
+                            <span className="text-[11px] text-slate-300 font-mono truncate ml-2">
+                                {debugSession.funcao || debugSession.role || 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center overflow-hidden">
+                            <span className="text-[10px] text-[#FFCC00]/80 uppercase shrink-0">Unidade</span>
+                            <span className="text-[11px] text-slate-300 font-mono truncate ml-2">
+                                {debugSession.unidade || debugSession.department || 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center overflow-hidden">
+                            <span className="text-[10px] text-[#FFCC00]/80 uppercase shrink-0">Nível</span>
+                            <span className="text-[11px] text-slate-300 font-mono truncate ml-2">
+                                {debugSession.nivelAcesso || debugSession.nivel_de_acesso || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* User Profile */}
             <div className="p-3 border-t border-white/10 shrink-0">
                 <div
                     className={`flex items-center rounded-xl transition-colors group ${isCollapsed ? 'justify-center p-2' : 'space-x-3 p-3 hover:bg-white/5 cursor-pointer'
                         }`}
                 >
-                    <div className="w-10 h-10 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[#FFD700] overflow-hidden">
+                    <div className={`w-10 h-10 shrink-0 rounded-full bg-[#005696] border border-slate-700 flex items-center justify-center text-[#FFCC00] overflow-hidden ${session ? 'animate-pulse' : ''}`}>
                         <User size={18} />
                     </div>
 
                     {!isCollapsed && (
                         <div className="flex-1 min-w-0 mr-1 flex flex-col">
-                            <span className="text-white font-bold text-sm truncate">{user?.nome || 'Usuário'}</span>
-                            <span className="text-[#fccb06] text-xs truncate">{user?.funcao || 'Membro'}</span>
+                            <span className="text-white font-bold text-sm truncate">{session?.name || 'Usuário'}</span>
+                            <div className="flex bg-[#005696]/20 px-2 py-0.5 rounded-md mt-0.5 w-fit gap-1 items-center">
+                                <span className="text-[#FFCC00] text-[10px] uppercase font-bold truncate tracking-wider">{session?.role || 'Membro'}</span>
+                                {session?.department && (
+                                    <>
+                                        <span className="text-white/30 text-[10px]">•</span>
+                                        <span className="text-slate-300 text-[10px] truncate">{session.department}</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     )}
 

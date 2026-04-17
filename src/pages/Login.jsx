@@ -89,9 +89,9 @@ const Login = () => {
 
                 const processLoginData = (payloadData) => {
                     const userDataObj = {
-                         ...payloadData,
-                         email: payloadData.email || email,
-                         nome: payloadData.nome || payloadData.full_name || email.split('@')[0]
+                        ...payloadData,
+                        email: payloadData.email || email,
+                        nome: payloadData.nome || payloadData.full_name || email.split('@')[0]
                     };
                     if (payloadData.funcao) userDataObj.funcao = payloadData.funcao;
                     const nivel = payloadData.nivelAcesso || payloadData.nivel_de_acesso;
