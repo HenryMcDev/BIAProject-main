@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Check, CheckCheck, MoreVertical, Paperclip, Phone, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { connectSocket, disconnectSocket, onEvent, offEvent, getSocket } from '../services/socket';
 
 const formatTime = (ts) => {
   try {
@@ -17,6 +18,51 @@ const ChatInterface = ({ contact }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
+  const selectedContactRef = useRef(contact);
+
+  useEffect(() => {
+    selectedContactRef.current = contact;
+  }, [contact]);
+
+  useEffect(() => {
+    let currentSessionData = {};
+    try {
+        currentSessionData = JSON.parse(localStorage.getItem('bit_session') || '{}');
+    } catch(e) {}
+    
+    // Prioritize context session, fallback to localStorage
+    const userId = session?.user?.id || currentSessionData?.user?.id;
+    if (!userId) return;
+
+    connectSocket(userId);
+
+    const handleNewMessage = (payload) => {
+      const activeContact = selectedContactRef.current;
+      const activeChatId = activeContact?.telefone_cliente || activeContact?.telefone || activeContact?.phone || activeContact?.id;
+      const payloadChatId = payload.chatId || payload.telefone_cliente || payload.id;
+
+      if (payloadChatId === activeChatId) {
+        setChatMessages(prev => {
+          if (payload.id && prev.some(m => m.id === payload.id)) {
+            return prev;
+          }
+          return [...prev, payload];
+        });
+      }
+    };
+
+    onEvent('new_message', handleNewMessage);
+    onEvent('message_sent', handleNewMessage); // Confirmations
+
+    return () => {
+      offEvent('new_message', handleNewMessage);
+      offEvent('message_sent', handleNewMessage);
+      // Let Context handle socket disconnect if they are shared, or keep it if independent 
+      // but typical pattern is single instance so disconnectSocket might kill Context socket if unmounted.
+      // We'll keep it as the user had it.
+      disconnectSocket();
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!selectedContact) {
@@ -43,8 +89,7 @@ const ChatInterface = ({ contact }) => {
     };
 
     fetchHistory();
-    const interval = setInterval(fetchHistory, 10000);
-    return () => clearInterval(interval);
+    // Remover o setInterval que causava o polling contínuo
   }, [selectedContact]);
 
   useEffect(() => {
@@ -87,14 +132,15 @@ const ChatInterface = ({ contact }) => {
         user_context: currentUser
       };
 
-      // Background request to n8n
-      await fetch('https://automacao-n8n.dczbc9.easypanel.host/webhook/chatinterface', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      // Disparar envio via Socket ao invés de fetch REST
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('send_response', payload);
+      } else {
+        console.error("Socket not connected, cannot send message.");
+      }
     } catch (error) {
-      console.error("Erro ao enviar a mensagem para o n8n em background:", error);
+      console.error("Erro ao enviar a mensagem pelo socket:", error);
     }
   };
 
@@ -116,7 +162,10 @@ const ChatInterface = ({ contact }) => {
             <span className="text-white font-bold">{selectedContact.remetente ? selectedContact.remetente.charAt(0).toUpperCase() : "C"}</span>
           </div>
           <div>
-            <h2 className="text-white font-semibold">{selectedContact.remetente || "Cliente"}</h2>
+            <h2 className="text-white font-semibold flex items-center gap-2">
+              {selectedContact.remetente || "Cliente"}
+              <span className="w-2 h-2 rounded-full bg-bit-yellow animate-pulse" title="Live Connection" />
+            </h2>
             <p className="text-xs text-gray-400">online</p>
           </div>
         </div>

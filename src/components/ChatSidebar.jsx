@@ -26,8 +26,46 @@ const ChatSidebar = ({ selectedContact, setSelectedContact }) => {
     };
 
     fetchContacts();
-    const interval = setInterval(fetchContacts, 15000);
-    return () => clearInterval(interval);
+
+    // Integrar via Socket.io em vez de polling
+    const handleStatusUpdate = (payload) => {
+       setContacts(prev => prev.map(contact => {
+          const isMatch = (contact.id && contact.id === payload.id) || 
+                          (contact.telefone_cliente && contact.telefone_cliente === payload.telefone_cliente);
+          if (isMatch) {
+             return { ...contact, ...payload.updateData }; // ex: cor da label
+          }
+          return contact;
+       }));
+    };
+
+    const handleNewMessageSidebar = (payload) => {
+       // Opcional: Atualiza o fragmento de última mensagem caso seja interessante no dashboard
+       setContacts(prev => prev.map(contact => {
+          const isMatch = (contact.id && contact.id === payload.id) || 
+                          (contact.telefone_cliente && contact.telefone_cliente === (payload.telefone_cliente || payload.id));
+          if (isMatch) {
+             return { 
+                ...contact, 
+                conteudo: payload.conteudo || payload.message || contact.conteudo,
+                data_ultima_mensagem: new Date().toISOString()
+             };
+          }
+          return contact;
+       }));
+    };
+
+    import('../services/socket').then(({ onEvent, offEvent }) => {
+       onEvent('status_update', handleStatusUpdate);
+       onEvent('new_message', handleNewMessageSidebar);
+    }).catch(e => console.error("Error loading socket for Sidebar:", e));
+
+    return () => {
+       import('../services/socket').then(({ offEvent }) => {
+           offEvent('status_update', handleStatusUpdate);
+           offEvent('new_message', handleNewMessageSidebar);
+       }).catch(() => {});
+    };
   }, []);
 
   return (

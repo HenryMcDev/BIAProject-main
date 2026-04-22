@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { connectSocket, disconnectSocket, onEvent, offEvent } from '../services/socket';
 
 const ChatContext = createContext();
 
@@ -41,22 +42,68 @@ export const ChatProvider = ({ children }) => {
         fetchContacts();
     }, []);
 
+    // Effect for Socket Initialization
     useEffect(() => {
-        let intervalId;
+        let currentSessionData = {};
+        try {
+            currentSessionData = JSON.parse(localStorage.getItem('bit_session') || '{}');
+        } catch(e) {}
+        
+        const userId = currentSessionData?.user?.id;
+        if (!userId) {
+             console.warn("User ID not found, socket won't connect properly.");
+             return;
+        }
+
+        connectSocket(userId);
+
+        const handleNewMessage = (payload) => {
+            // Injetar a mensagem se ela for pra conversa atual ou só pra manter state
+            setMessages(prev => {
+                if (payload.id && prev.some(m => m.id === payload.id)) {
+                    return prev;
+                }
+                return [...prev, payload];
+            });
+        };
+
+        const handleStatusUpdate = (payload) => {
+            // Atualizar status do contato na listagem
+            setContacts(prevContacts => prevContacts.map(contact => {
+                const isMatch = (contact.id && contact.id === payload.id) || 
+                               (contact.telefone_cliente && contact.telefone_cliente === payload.telefone_cliente);
+                if (isMatch) {
+                    return { ...contact, ...payload.updateData }; // payload.updateData tem as changes (cor, lead)
+                }
+                return contact;
+            }));
+
+            // Se o atual for o que mudou, atualiza ativo também
+            setActiveContact(prev => {
+                if (!prev) return prev;
+                const isMatch = (prev.id && prev.id === payload.id) || 
+                               (prev.telefone_cliente && prev.telefone_cliente === payload.telefone_cliente);
+                return isMatch ? { ...prev, ...payload.updateData } : prev;
+            });
+        };
+
+        onEvent('new_message', handleNewMessage);
+        onEvent('status_update', handleStatusUpdate);
+
+        return () => {
+            offEvent('new_message', handleNewMessage);
+            offEvent('status_update', handleStatusUpdate);
+            disconnectSocket();
+        };
+    }, []);
+
+    // Effect for changing active contact
+    useEffect(() => {
         if (activeContact?.phone) {
             fetchMessages(activeContact.phone);
-            intervalId = setInterval(() => {
-                fetchMessages(activeContact.phone);
-            }, 3000);
         } else {
             setMessages([]);
         }
-
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
     }, [activeContact]);
 
     return (
