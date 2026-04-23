@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    allowedHosts: 'all',
     proxy: {
       '/n8n-webhook': {
         target: 'http://localhost:5678',
@@ -15,6 +16,6 @@ export default defineConfig({
     }
   },
   preview: {
-    allowedHosts: ['automacao-bia-crm.dczbc9.easypanel.host']
+    allowedHosts: 'all'
   }
 })
