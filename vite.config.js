@@ -13,5 +13,8 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/n8n-webhook/, '')
       }
     }
+  },
+  preview: {
+    allowedHosts: ['automacao-bia-crm.dczbc9.easypanel.host']
   }
 })

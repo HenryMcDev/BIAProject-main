@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, User, LogOut, Menu, Shield, MessageSquare } from 'lucide-react';
+import { Home, User, LogOut, Menu, Shield, MessageSquare, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -28,6 +28,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
     const menuItems = [
         { icon: Home, label: 'Home', path: '/' },
+        { icon: Database, label: 'Teste o Banco', path: '/teste-banco' },
         ...(isAdmin ? [{ icon: Shield, label: 'Painel Admin', path: '/admin' }] : [])
     ];
 

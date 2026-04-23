@@ -10,6 +10,7 @@ import { ChatProvider } from './context/ChatContext';
 import ScheduleCalendar from './pages/ScheduleCalendar';
 // import SupabaseDiagnostic from './components/SupabaseDiagnostic';
 import ResetPasswordModal from './components/ResetPasswordModal';
+import DatabaseTest from './pages/DatabaseTest';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -66,6 +67,14 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <ScheduleCalendar />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/teste-banco" element={
+          <ProtectedRoute>
+            <Layout>
+              <DatabaseTest />
             </Layout>
           </ProtectedRoute>
         } />

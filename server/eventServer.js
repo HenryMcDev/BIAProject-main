@@ -145,6 +145,17 @@ app.post('/webhook/events', async (req, res) => {
   }
 });
 
+// Rota de teste para consultar as mensagens no banco de dados
+app.get('/api/teste-mensagens', async (req, res) => {
+  try {
+    const [linhas] = await pool.query('SELECT id, telefone_cliente, conteudo, data_envio, remetente FROM mensagens ORDER BY data_envio DESC LIMIT 50');
+    res.json(linhas);
+  } catch (erro) {
+    console.error('Erro ao buscar mensagens:', erro);
+    res.status(500).json({ erro: 'Falha ao conectar na VPS', detalhes: erro.message });
+  }
+});
+
 server.listen(port, () => {
   console.log(`Event Server listening on port ${port}`);
 });
